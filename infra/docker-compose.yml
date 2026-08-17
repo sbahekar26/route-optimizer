@@ -1,0 +1,14 @@
+services:
+  stops-db:
+    image: postgres:18       # pin a major version — look up current stable
+    environment:
+      POSTGRES_USER: stops
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: stopsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - stops-db-data:/var/lib/postgresql
+
+volumes:
+  stops-db-data:
