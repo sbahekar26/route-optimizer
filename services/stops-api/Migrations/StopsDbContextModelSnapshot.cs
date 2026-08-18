@@ -24,7 +24,7 @@ namespace StopsApi.Migrations
 
             modelBuilder.Entity("StopsApi.Stop", b =>
                 {
-                    b.Property<Guid>("id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
@@ -41,7 +41,7 @@ namespace StopsApi.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.HasKey("id");
+                    b.HasKey("Id");
 
                     b.ToTable("Stops");
                 });
