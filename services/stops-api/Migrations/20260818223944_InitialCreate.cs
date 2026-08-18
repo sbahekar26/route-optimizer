@@ -15,7 +15,7 @@ namespace StopsApi.Migrations
                 name: "Stops",
                 columns: table => new
                 {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Address = table.Column<string>(type: "text", nullable: false),
                     Latitude = table.Column<double>(type: "double precision", nullable: false),
                     Longitude = table.Column<double>(type: "double precision", nullable: false),
@@ -23,7 +23,7 @@ namespace StopsApi.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Stops", x => x.id);
+                    table.PrimaryKey("PK_Stops", x => x.Id);
                 });
         }
 
