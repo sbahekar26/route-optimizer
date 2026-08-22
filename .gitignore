@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# OSRM map data — large binaries, not source
+infra/osrm/data/
