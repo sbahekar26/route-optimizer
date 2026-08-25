@@ -1,17 +1,36 @@
-﻿using Solver;
+﻿using System.Text;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
-var coordinates = new List<Coordinate>
+var factory = new ConnectionFactory { HostName = "localhost" };
+
+using var connection = await factory.CreateConnectionAsync();
+using var channel = await connection.CreateChannelAsync();
+
+await channel.QueueDeclareAsync(
+    queue: "hello",
+    durable: true,
+    exclusive: false,
+    autoDelete: false,
+    arguments: null);
+
+// --- consume ---
+var consumer = new AsyncEventingBasicConsumer(channel);
+consumer.ReceivedAsync += (model, ea) =>
 {
-    new Coordinate(43.3255, -79.7990),  // Burlington
-    new Coordinate(43.6532, -79.3832),  // Toronto
-    new Coordinate(43.5890, -79.6441),  // Oakville
-    new Coordinate(43.4675, -79.6877),  // Bronte
+    var body = ea.Body.ToArray();
+    var message = Encoding.UTF8.GetString(body);
+    Console.WriteLine($"Received: {message}");
+    return Task.CompletedTask;
 };
 
-var matrix = DistanceCalculator.BuildMatrix(coordinates);
+await channel.BasicConsumeAsync(queue: "hello", autoAck: true, consumer: consumer);
 
-var solver = new RouteSolver();
-var result = solver.Solve(matrix);
+// --- publish ---
+var text = "hello from the solver";
+var bodyBytes = Encoding.UTF8.GetBytes(text);
+await channel.BasicPublishAsync(exchange: "", routingKey: "hello", body: bodyBytes);
+Console.WriteLine($"Sent: {text}");
 
-Console.WriteLine($"Route: {string.Join(" -> ", result.Route)}");
-Console.WriteLine($"Total cost (meters): {result.TotalCost}");
+Console.WriteLine("Press Enter to exit.");
+Console.ReadLine();
