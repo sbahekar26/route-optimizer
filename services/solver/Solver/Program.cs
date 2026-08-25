@@ -1,36 +1,52 @@
 ﻿using System.Text;
+using System.Text.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RouteOptimizer.Contracts;
+using Solver;
 
 var factory = new ConnectionFactory { HostName = "localhost" };
-
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
 await channel.QueueDeclareAsync(
-    queue: "hello",
+    queue: "optimization-requests",
     durable: true,
     exclusive: false,
     autoDelete: false,
     arguments: null);
 
-// --- consume ---
+using var http = new HttpClient();
+var osrm = new OsrmClient(http, "http://localhost:5050");
+var solver = new RouteSolver();
+
 var consumer = new AsyncEventingBasicConsumer(channel);
-consumer.ReceivedAsync += (model, ea) =>
+consumer.ReceivedAsync += async (model, ea) =>
 {
-    var body = ea.Body.ToArray();
-    var message = Encoding.UTF8.GetString(body);
-    Console.WriteLine($"Received: {message}");
-    return Task.CompletedTask;
+    var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+    var request = JsonSerializer.Deserialize<OptimizationRequested>(json,
+        new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+
+    Console.WriteLine($"Received job {request.JobId} with {request.Stops.Count} stops");
+
+    var table = await osrm.GetTableAsync(request.Stops);
+    var matrix = ToLongMatrix(table.Durations);
+    var result = solver.Solve(matrix);
+
+    Console.WriteLine($"Job {request.JobId}: route {string.Join(" -> ", result.Route)}, cost {result.TotalCost}s");
 };
 
-await channel.BasicConsumeAsync(queue: "hello", autoAck: true, consumer: consumer);
+await channel.BasicConsumeAsync(queue: "optimization-requests", autoAck: true, consumer: consumer);
 
-// --- publish ---
-var text = "hello from the solver";
-var bodyBytes = Encoding.UTF8.GetBytes(text);
-await channel.BasicPublishAsync(exchange: "", routingKey: "hello", body: bodyBytes);
-Console.WriteLine($"Sent: {text}");
-
-Console.WriteLine("Press Enter to exit.");
+Console.WriteLine("Solver worker running. Waiting for jobs. Press Enter to exit.");
 Console.ReadLine();
+
+static long[,] ToLongMatrix(double[][] source)
+{
+    int n = source.Length;
+    var matrix = new long[n, n];
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            matrix[i, j] = (long)source[i][j];
+    return matrix;
+}
