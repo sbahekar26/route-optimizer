@@ -1,4 +1,5 @@
 using Google.OrTools.ConstraintSolver;
+using RouteOptimizer.Contracts;
 
 namespace Solver;
 

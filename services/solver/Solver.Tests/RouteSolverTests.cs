@@ -1,5 +1,6 @@
 ﻿using Solver;
 using Xunit;
+using RouteOptimizer.Contracts;
 
 namespace Solver.Tests;
 
