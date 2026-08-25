@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Solver\Solver.csproj" />
+    <ProjectReference Include="..\..\..\contracts\RouteOptimizer.Contracts\RouteOptimizer.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

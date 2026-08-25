@@ -1,5 +1,5 @@
+using RouteOptimizer.Contracts;
 namespace Solver;
-
 public static class DistanceCalculator
 {
     private const double EarthRadiusMeters = 6_371_000;
