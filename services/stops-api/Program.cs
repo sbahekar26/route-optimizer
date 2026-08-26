@@ -1,7 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using RabbitMQ.Client;
 using StopsApi;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// in Program.cs, after builder is created, before builder.Build()
+
+var rabbitFactory = new ConnectionFactory { HostName = "localhost" };
+var rabbitConnection = await rabbitFactory.CreateConnectionAsync();
+builder.Services.AddSingleton(rabbitConnection);
 
 builder.Services.AddDbContext<StopsDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("StopsDb")));
