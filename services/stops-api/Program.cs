@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using RabbitMQ.Client;
 using StopsApi;
+using System.Text;
+using System.Text.Json;
+using RouteOptimizer.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +37,39 @@ app.MapPost("/stops", async (CreateStopRequest request, StopsDbContext db) =>
     await db.SaveChangesAsync();
 
     return Results.Created($"/stops/{stop.Id}", stop);
+});
+
+app.MapPost("/optimize", async (StopsDbContext db, IConnection rabbit) =>
+{
+    var stops = await db.Stops.ToListAsync();
+
+    if (stops.Count < 2)
+        return Results.BadRequest("Need at least 2 stops to optimize.");
+
+    var coordinates = stops
+        .Select(s => new Coordinate(s.Latitude, s.Longitude))
+        .ToList();
+
+    var jobId = Guid.NewGuid();
+    var request = new OptimizationRequested(jobId, coordinates);
+
+    var json = JsonSerializer.Serialize(request);
+    var body = Encoding.UTF8.GetBytes(json);
+
+    using var channel = await rabbit.CreateChannelAsync();
+    await channel.QueueDeclareAsync(
+        queue: "optimization-requests",
+        durable: true,
+        exclusive: false,
+        autoDelete: false,
+        arguments: null);
+
+    await channel.BasicPublishAsync(
+        exchange: "",
+        routingKey: "optimization-requests",
+        body: body);
+
+    return Results.Accepted($"/optimize/{jobId}", new { jobId });
 });
 
 app.Run();
