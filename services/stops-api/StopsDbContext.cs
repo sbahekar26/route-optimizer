@@ -8,6 +8,6 @@ public class StopsDbContext : DbContext
         : base(options)
     {
     }
-
+    public DbSet<OptimizationJob> OptimizationJobs => Set<OptimizationJob>();
     public DbSet<Stop> Stops => Set<Stop>();
 }
