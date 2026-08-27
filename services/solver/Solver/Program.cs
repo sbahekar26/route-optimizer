@@ -16,6 +16,13 @@ await channel.QueueDeclareAsync(
     autoDelete: false,
     arguments: null);
 
+await channel.QueueDeclareAsync(
+    queue: "optimization-results",
+    durable: true,
+    exclusive: false,
+    autoDelete: false,
+    arguments: null);
+
 using var http = new HttpClient();
 var osrm = new OsrmClient(http, "http://localhost:5050");
 var solver = new RouteSolver();
@@ -33,8 +40,20 @@ consumer.ReceivedAsync += async (model, ea) =>
     var matrix = ToLongMatrix(table.Durations);
     var result = solver.Solve(matrix);
 
+    var response = new RouteOptimized(request.JobId, result.Route, result.TotalCost);
+    var responseJson = JsonSerializer.Serialize(response);
+    var responseBody = Encoding.UTF8.GetBytes(responseJson);
+
+    await channel.BasicPublishAsync(
+        exchange: "",
+        routingKey: "optimization-results",
+        body: responseBody);
+
+    Console.WriteLine($"Published result for job {request.JobId}: cost {result.TotalCost}s");
+
     Console.WriteLine($"Job {request.JobId}: route {string.Join(" -> ", result.Route)}, cost {result.TotalCost}s");
 };
+
 
 await channel.BasicConsumeAsync(queue: "optimization-requests", autoAck: true, consumer: consumer);
 
