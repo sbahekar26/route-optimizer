@@ -16,12 +16,22 @@ builder.Services.AddSingleton(rabbitConnection);
 builder.Services.AddDbContext<StopsDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("StopsDb")));
 
+builder.Services.AddHostedService<ResultConsumer>();
+
 var app = builder.Build();
 
 app.MapGet("/health", () => new { status = "healthy", service = "stops-api" });
 
 app.MapGet("/stops", async(StopsDbContext db) => 
     await db.Stops.ToListAsync());
+
+app.MapGet("/optimize/{jobId}", async (Guid jobId, StopsDbContext db) =>
+{
+    var job = await db.OptimizationJobs.FindAsync(jobId);
+    return job is null
+        ? Results.NotFound(new { jobId, status = "pending or not found" })
+        : Results.Ok(job);
+});
 
 app.MapPost("/stops", async (CreateStopRequest request, StopsDbContext db) =>
 {
