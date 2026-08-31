@@ -17,6 +17,13 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend
+    command: osrm-routed --algorithm mld /data/ontario-latest.osrm
+    ports:
+      - "5050:5000"
+    volumes:
+      - ./osrm/data:/data
 
 volumes:
   stops-db-data:
