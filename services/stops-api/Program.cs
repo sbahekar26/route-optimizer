@@ -13,12 +13,21 @@ var rabbitFactory = new ConnectionFactory { HostName = "localhost" };
 var rabbitConnection = await rabbitFactory.CreateConnectionAsync();
 builder.Services.AddSingleton(rabbitConnection);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("frontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
+
 builder.Services.AddDbContext<StopsDbContext>(options => 
     options.UseNpgsql(builder.Configuration.GetConnectionString("StopsDb")));
 
 builder.Services.AddHostedService<ResultConsumer>();
 
 var app = builder.Build();
+app.UseCors("frontend");
 
 app.MapGet("/health", () => new { status = "healthy", service = "stops-api" });
 
