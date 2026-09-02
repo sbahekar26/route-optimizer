@@ -22,3 +22,68 @@ for (const stop of stops) {
     .addTo(map)
     .bindPopup(stop.address);
 }
+
+let routeLine: L.Polyline | null = null;
+
+async function optimizeRoute() {
+  const postResponse = await fetch("http://localhost:5276/optimize", {
+    method: "POST",
+  });
+  const { jobId } = await postResponse.json();
+  console.log("Job queued:", jobId);
+
+  const result = await pollForResult(jobId);
+  console.log("Route received:", result.route);
+
+  drawRoute(result.route);
+}
+
+async function pollForResult(jobId: string): Promise<{ route: number[]; totalCost: number }> {
+  while (true) {
+    const response = await fetch(`http://localhost:5276/optimize/${jobId}`);
+
+    if (response.ok) {
+      return await response.json();
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+function drawRoute(route: number[]) {
+  const latlngs: [number, number][] = route.map((index) => [
+    stops[index].latitude,
+    stops[index].longitude,
+  ]);
+
+  if (routeLine) {
+    routeLine.remove();
+  }
+
+  routeLine = L.polyline(latlngs, { color: "blue", weight: 4 }).addTo(map);
+  map.fitBounds(routeLine.getBounds());
+}
+
+const OptimizeControl = L.Control.extend({
+  options: { position: "topright" },
+  onAdd: function () {
+    const button = L.DomUtil.create("button");
+    button.textContent = "Optimize route";
+    button.style.padding = "8px 12px";
+    button.style.cursor = "pointer";
+    button.style.background = "white";
+    button.style.border = "2px solid rgba(0,0,0,0.2)";
+    button.style.borderRadius = "4px";
+    button.style.fontWeight = "500";
+
+    L.DomEvent.on(button, "click", async (e) => {
+      L.DomEvent.stopPropagation(e);
+      L.DomEvent.preventDefault(e);
+      await optimizeRoute();
+    });
+
+    return button;
+  },
+});
+
+map.addControl(new OptimizeControl());
