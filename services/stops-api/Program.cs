@@ -91,4 +91,18 @@ app.MapPost("/optimize", async (StopsDbContext db, IConnection rabbit) =>
     return Results.Accepted($"/optimize/{jobId}", new { jobId });
 });
 
+app.MapPut("/stops/{id}", async (Guid id, CreateStopRequest request, StopsDbContext db) =>
+{
+    var stop = await db.Stops.FindAsync(id);
+    if (stop is null)
+        return Results.NotFound();
+
+    stop.Address = request.Address;
+    stop.Latitude = request.Latitude;
+    stop.Longitude = request.Longitude;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(stop);
+});
+
 app.Run();
