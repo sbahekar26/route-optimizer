@@ -18,9 +18,31 @@ const response = await fetch("http://localhost:5276/stops");
 const stops: Stop[] = await response.json();
 
 for (const stop of stops) {
-  L.marker([stop.latitude, stop.longitude])
+  const marker = L.marker([stop.latitude, stop.longitude], { draggable: true })
     .addTo(map)
     .bindPopup(stop.address);
+
+  marker.on("dragend", async () => {
+    const pos = marker.getLatLng();
+
+    // persist the new location
+    await fetch(`http://localhost:5276/stops/${stop.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: stop.address,
+        latitude: pos.lat,
+        longitude: pos.lng,
+      }),
+    });
+
+    // update our local copy so the polyline uses the new position
+    stop.latitude = pos.lat;
+    stop.longitude = pos.lng;
+
+    // re-optimize with the new layout
+    await optimizeRoute();
+  });
 }
 
 let routeLine: L.Polyline | null = null;
