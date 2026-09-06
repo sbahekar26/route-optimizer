@@ -57,10 +57,12 @@ async function optimizeRoute() {
   const result = await pollForResult(jobId);
   console.log("Route received:", result.route);
 
-  drawRoute(result.route);
+  drawRoute(result.route, result.geometry);
 }
 
-async function pollForResult(jobId: string): Promise<{ route: number[]; totalCost: number }> {
+async function pollForResult(
+  jobId: string,
+): Promise<{ route: number[]; totalCost: number; geometry: string }> {
   while (true) {
     const response = await fetch(`http://localhost:5276/optimize/${jobId}`);
 
@@ -72,15 +74,21 @@ async function pollForResult(jobId: string): Promise<{ route: number[]; totalCos
   }
 }
 
-function drawRoute(route: number[]) {
-  const latlngs: [number, number][] = route.map((index) => [
-    stops[index].latitude,
-    stops[index].longitude,
-  ]);
-
+function drawRoute(route: number[], geometry?: string) {
   if (routeLine) {
     routeLine.remove();
   }
+
+  // geometry is a JSON-serialized array of [lng, lat] pairs (GeoJSON order);
+  // Leaflet wants [lat, lng], so flip each pair.
+  const roadLatLngs: [number, number][] = geometry
+    ? JSON.parse(geometry).map(([lng, lat]: [number, number]) => [lat, lng])
+    : [];
+
+  const latlngs: [number, number][] =
+    roadLatLngs.length > 0
+      ? roadLatLngs
+      : route.map((index) => [stops[index].latitude, stops[index].longitude]);
 
   routeLine = L.polyline(latlngs, { color: "blue", weight: 4 }).addTo(map);
   map.fitBounds(routeLine.getBounds());

@@ -44,6 +44,7 @@ public class ResultConsumer : BackgroundService
                 JobId = result.JobId,
                 Route = result.Route,
                 TotalCost = result.TotalCost,
+                Geometry = System.Text.Json.JsonSerializer.Serialize(result.Geometry),
                 CompletedAt = DateTime.UtcNow
             });
             await db.SaveChangesAsync();

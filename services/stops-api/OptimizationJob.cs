@@ -8,5 +8,6 @@ public class OptimizationJob
     public Guid JobId { get; set; }
     public long[] Route { get; set; } = [];
     public long TotalCost { get; set; }
+    public string Geometry { get; set; } = "[]";
     public DateTime CompletedAt { get; set; }
 }
