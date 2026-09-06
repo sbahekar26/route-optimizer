@@ -9,6 +9,7 @@ var factory = new ConnectionFactory { HostName = "localhost" };
 using var connection = await factory.CreateConnectionAsync();
 using var channel = await connection.CreateChannelAsync();
 
+
 await channel.QueueDeclareAsync(
     queue: "optimization-requests",
     durable: true,
@@ -37,10 +38,16 @@ consumer.ReceivedAsync += async (model, ea) =>
     Console.WriteLine($"Received job {request.JobId} with {request.Stops.Count} stops");
 
     var table = await osrm.GetTableAsync(request.Stops);
-    var matrix = ToLongMatrix(table.Durations);
+    var matrix = MatrixConverter.ToLongMatrix(table.Durations);
     var result = solver.Solve(matrix);
 
-    var response = new RouteOptimized(request.JobId, result.Route, result.TotalCost);
+    var orderedStops = result.Route
+        .Select(index => request.Stops[(int)index])
+        .ToList();
+
+    var geometry = await osrm.GetRouteGeometryAsync(orderedStops);
+
+    var response = new RouteOptimized(request.JobId, result.Route, result.TotalCost, geometry);
     var responseJson = JsonSerializer.Serialize(response);
     var responseBody = Encoding.UTF8.GetBytes(responseJson);
 
@@ -59,13 +66,3 @@ await channel.BasicConsumeAsync(queue: "optimization-requests", autoAck: true, c
 
 Console.WriteLine("Solver worker running. Waiting for jobs. Press Enter to exit.");
 Console.ReadLine();
-
-static long[,] ToLongMatrix(double[][] source)
-{
-    int n = source.Length;
-    var matrix = new long[n, n];
-    for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++)
-            matrix[i, j] = (long)source[i][j];
-    return matrix;
-}

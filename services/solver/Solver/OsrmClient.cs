@@ -30,4 +30,19 @@ public class OsrmClient
 
         return JsonSerializer.Deserialize<OsrmTableResponse>(json, options)!;
     }
+
+    public async Task<double[][]> GetRouteGeometryAsync(IReadOnlyList<Coordinate> orderedStops)
+{
+    var coordString = string.Join(";",
+        orderedStops.Select(c => $"{c.Longitude},{c.Latitude}"));
+
+    var url = $"{_baseUrl}/route/v1/driving/{coordString}?geometries=geojson&overview=full";
+
+    var json = await _http.GetStringAsync(url);
+
+    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var response = JsonSerializer.Deserialize<OsrmRouteResponse>(json, options)!;
+
+    return response.Routes[0].Geometry.Coordinates;
+}
 }

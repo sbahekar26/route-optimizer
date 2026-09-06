@@ -1,3 +1,3 @@
 namespace RouteOptimizer.Contracts;
 
-public record RouteOptimized(Guid JobId, long[] Route, long TotalCost);
+public record RouteOptimized(Guid JobId, long[] Route, long TotalCost, double[][] Geometry);
